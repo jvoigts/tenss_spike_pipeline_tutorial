@@ -32,7 +32,7 @@ plot(data_raw(1:plotlim,:));
 %% filter
 
 clf; hold on;
-[b,a] = butter(3, [300 3000]/(fs/2)); % choose filter
+[b,a] = butter(3, [300 3000]/(fs/2)); % choose filter (normalize bp freq. to nyquist freq.)
 
 data_bp=filter(b,a,data_raw); %apply filter in one direction
 
@@ -40,9 +40,9 @@ plot(data_bp(1:plotlim,:));
 
 % find treshold crossings
 treshold=20;
-crossed= min(data_bp')'<-treshold; % trigger if _any_ channel crosses
+crossed= min(data_bp,[],2)<-treshold; % trigger if _any_ channel crosses in neg. direction
 
-spike_onsets=find(crossed==0 & circshift(crossed,-1)==1);
+spike_onsets=find(diff(crossed)==1);
 
 length_sec=size(data,1)/fs;
 fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onsets),round(length_sec/60),numel(spike_onsets)/length_sec)
@@ -71,7 +71,7 @@ for i=1:numel(spike_onsets)
 end;
 
 
-%%
+%% plot peak to peak amplitudes
 clf; hold on;
 plot(spikes.peakamp(:,2),spikes.peakamp(:,4),'.');
 daspect([1 1 1]);

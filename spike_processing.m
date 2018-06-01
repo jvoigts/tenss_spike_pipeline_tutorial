@@ -2,6 +2,8 @@
 
 %% load raw data
 
+set(0,'DefaultFigureWindowStyle','docked'); % fix matlab's figure positioning bug
+
 % raw data available on
 % https://drive.google.com/drive/folders/1CwFcErgp3F3D6I2TB_hTtW1JAQB21TAC?usp=sharing
 %
@@ -22,7 +24,7 @@ fs = info.header.sampleRate;
 
 %% plot
 
-plotlim=100000;
+plotlim=50000;
 figure(1);
 clf;
 hold on;
@@ -45,7 +47,7 @@ crossed= min(data_bp,[],2)<-treshold; % trigger if _any_ channel crosses in neg.
 spike_onsets=find(diff(crossed)==1);
 
 length_sec=size(data,1)/fs;
-fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onsets),round(length_sec/60),numel(spike_onsets)/length_sec)
+fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onsets),round(length_sec/60),numel(spike_onsets)/length_sec);
 
 for i=1:numel(spike_onsets)
     if(spike_onsets(i)<plotlim)
@@ -83,34 +85,36 @@ spikes.cluster=ones(numel(spike_onsets),1);
 % cluster 0 shall be the noise cluster (dont plot this one)
 run =1;
 
-cmap=jet;
 projections=[1 2; 1 3; 1 4; 2 3; 2 4; 3 4]; % possible feature projections
 use_projection=1;
 
-cluster_selected=2;
+cluster_selected=2; spike_selected=1;
 
 while run
     dat_x=spikes.peakamps(:,projections(use_projection,1));
     dat_y=spikes.peakamps(:,projections(use_projection,2));
     
     clf; 
-    subplot(2,3,1); hold on;% plot mean waveform
+    subplot(2,3,1); hold on;% plot median waveform
     plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.2),'g');
     plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.5),'k');
     plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.8),'g');
+    plot(spikes.waveforms(spike_selected,:),'r'); % also plot currently selected spike waveform
+    
     title('waveforms from cluster');
     
     subplot(2,3,4); hold on;% plot isi distribution
     isi = diff(spikes.times(spikes.cluster==cluster_selected));
-    bins=linspace(0.5,10,20); 
+    bins=linspace(0.5,15,20); 
     h= hist(isi,bins); h(end)=0;
     stairs(bins,h);
-    
+    title('ISI histogram'); xlabel('isi(ms)');
     
     ax=subplot(2,3,[2 3 5 6]); hold on; % plot main feature display
     ii=spikes.cluster>0; % dont plot noise cluster
     scatter(dat_x(ii),dat_y(ii),(0.5+(spikes.cluster(ii)==cluster_selected))*20,spikes.cluster(ii)*2,'filled');
-    title(sprintf('current cluster %d',cluster_selected));
+    plot(dat_x(spike_selected),dat_y(spike_selected),'ro','markerSize',10);
+    title(sprintf('current cluster %d, projection %d, %d spikes in cluster',cluster_selected,use_projection,sum(spikes.cluster==cluster_selected)));
     
     [x,y,b]=ginput(1);
     
@@ -122,13 +126,21 @@ while run
     if b==31; use_projection=mod(use_projection-2,6)+1; end; % up/down: cycle trough projections
     if b==27; disp('exited'); run=0; end; % esc: exit
     
-    if b==43; % +, add to cluster
+    if b==43 | b==42; % +, add to cluster
         t= imfreehand(ax,'Closed' ,1);
         t.setClosed(1);
         r=t.getPosition;
         px=r(:,1);py=r(:,2);
         in = inpolygon(dat_x,dat_y,px,py);
-        spikes.cluster(in)=cluster_selected;
+        if b==43 % +, add
+            spikes.cluster(in)=cluster_selected;
+        else % *. intersect cluster (move all non selected to null cluster)
+            spikes.cluster(~in & spikes.cluster==cluster_selected)=1;
+        end;
+    end;
+    
+    if b==1 % left click - select individual waveform to plot
+        [~,spike_selected]=min((dat_x-x).^2 +(dat_y-y).^2);
     end;
     
 end;

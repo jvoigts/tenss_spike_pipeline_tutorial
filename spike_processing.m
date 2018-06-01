@@ -95,13 +95,13 @@ while run
     
     clf; 
     subplot(2,3,1); hold on;% plot mean waveform
-    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.2),'g');
-    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.5),'k');
-    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.8),'g');
+    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.2),'g');
+    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.5),'k');
+    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.8),'g');
     title('waveforms from cluster');
     
     subplot(2,3,4); hold on;% plot isi distribution
-    isi = diff(spikes.times(spikes.cluster(ii)==cluster_selected));
+    isi = diff(spikes.times(spikes.cluster==cluster_selected));
     bins=linspace(0.5,10,20); 
     h= hist(isi,bins); h(end)=0;
     stairs(bins,h);
@@ -109,7 +109,7 @@ while run
     
     ax=subplot(2,3,[2 3 5 6]); hold on; % plot main feature display
     ii=spikes.cluster>0; % dont plot noise cluster
-    scatter(dat_x(ii),dat_y(ii),(1+(spikes.cluster(ii)==cluster_selected))*10,spikes.cluster(ii)*2,'filled');
+    scatter(dat_x(ii),dat_y(ii),(0.5+(spikes.cluster(ii)==cluster_selected))*20,spikes.cluster(ii)*2,'filled');
     title(sprintf('current cluster %d',cluster_selected));
     
     [x,y,b]=ginput(1);

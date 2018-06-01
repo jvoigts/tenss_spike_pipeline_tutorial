@@ -61,17 +61,74 @@ spike_window=[1:32]-5; % grab some pre-treshold crossign samples
 spikes=[];
 spikes.waveforms=zeros(numel(spike_onsets),4*numel(spike_window)); % pre-allocate memory
 spikes.peakamps=zeros(numel(spike_onsets),4);
-
+spikes.times = spike_onsets/(fs/1000);
 
 for i=1:numel(spike_onsets)
     this_spike=(data_bp(spike_onsets(i)+spike_window,:));
     
     spikes.waveforms(i,:)= this_spike(:);% grab entire waveform
-    spikes.peakamp(i,:)=min(this_spike); % grab 4 peak amplitudes
+    spikes.peakamps(i,:)=min(this_spike); % grab 4 peak amplitudes
 end;
 
 
 %% plot peak to peak amplitudes
 clf; hold on;
-plot(spikes.peakamp(:,2),spikes.peakamp(:,4),'.');
+plot(spikes.peakamps(:,2),spikes.peakamps(:,4),'.');
 daspect([1 1 1]);
+
+%% initialize all cluster assignments to 1
+spikes.cluster=ones(numel(spike_onsets),1);
+
+%% manual spike sorter
+% cluster 0 shall be the noise cluster (dont plot this one)
+run =1;
+
+cmap=jet;
+projections=[1 2; 1 3; 1 4; 2 3; 2 4; 3 4]; % possible feature projections
+use_projection=1;
+
+cluster_selected=2;
+
+while run
+    dat_x=spikes.peakamps(:,projections(use_projection,1));
+    dat_y=spikes.peakamps(:,projections(use_projection,2));
+    
+    clf; 
+    subplot(2,3,1); hold on;% plot mean waveform
+    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.2),'g');
+    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.5),'k');
+    plot(quantile(spikes.waveforms(spikes.cluster(ii)==cluster_selected,:),.8),'g');
+    title('waveforms from cluster');
+    
+    subplot(2,3,4); hold on;% plot isi distribution
+    isi = diff(spikes.times(spikes.cluster(ii)==cluster_selected));
+    bins=linspace(0.5,10,20); 
+    h= hist(isi,bins); h(end)=0;
+    stairs(bins,h);
+    
+    
+    ax=subplot(2,3,[2 3 5 6]); hold on; % plot main feature display
+    ii=spikes.cluster>0; % dont plot noise cluster
+    scatter(dat_x(ii),dat_y(ii),(1+(spikes.cluster(ii)==cluster_selected))*10,spikes.cluster(ii)*2,'filled');
+    title(sprintf('current cluster %d',cluster_selected));
+    
+    [x,y,b]=ginput(1);
+    
+    if b>47 & b <58 % number keys, cluster select
+        cluster_selected=b-48;
+    end;
+    
+    if b==30; use_projection=mod(use_projection,6)+1; end; % up/down: cycle trough projections
+    if b==31; use_projection=mod(use_projection-2,6)+1; end; % up/down: cycle trough projections
+    if b==27; disp('exited'); run=0; end; % esc: exit
+    
+    if b==43; % +, add to cluster
+        t= imfreehand(ax,'Closed' ,1);
+        t.setClosed(1);
+        r=t.getPosition;
+        px=r(:,1);py=r(:,2);
+        in = inpolygon(dat_x,dat_y,px,py);
+        spikes.cluster(in)=cluster_selected;
+    end;
+    
+end;

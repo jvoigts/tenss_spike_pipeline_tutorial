@@ -24,7 +24,7 @@ fs = info.header.sampleRate;
 %%data_raw=data_raw(1:30000,:); % cut away some data for faster testing
 
 %% plot raw data
-% data_raw=data_raw-repmat(median_all_data',1,4);
+data_raw=data_raw-median_all_data;
 
 % data_raw(50000+[0:2],:)=-80; % add fake spike?
 

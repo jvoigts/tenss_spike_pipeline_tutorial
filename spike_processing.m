@@ -22,6 +22,7 @@ datapath='C:\Users\Jakob Voigts\Downloads\example_ephys\2022-06-12_16-24-58\Reco
 D=load_open_ephys_binary(datapath,'continuous',1,'mmap');
 
 tt=3;
+tt=7;
 v_temp=D.Data.Data.mapped([1:4]+((tt-1)*4),:)';
 %v_temp=D.Data.Data.mapped([10 15 19 12],:)';
 
@@ -74,6 +75,8 @@ disp('done filtering')
 
 spike_window=[1:32]-5; % grab some pre-treshold crossign samples
 
+spike_onsets(spike_onsets<10)=[];
+
 spikes=[];
 spikes.waveforms=zeros(numel(spike_onsets),4*numel(spike_window)); % pre-allocate memory
 spikes.peakamps=zeros(numel(spike_onsets),4);
@@ -89,7 +92,7 @@ end;
 
 %% plot peak to peak amplitudes
 clf; hold on;
-plot(spikes.peakamps(:,1),spikes.peakamps(:,4),'.');
+plot(spikes.peakamps(:,3),spikes.peakamps(:,1),'.');
 daspect([1 1 1]);
 
 %% initialize all cluster assignments to 1

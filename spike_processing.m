@@ -23,6 +23,7 @@ D=load_open_ephys_binary(datapath,'continuous',1,'mmap');
 
 tt=3;
 v_temp=D.Data.Data.mapped([1:4]+((tt-1)*4),:)';
+%v_temp=D.Data.Data.mapped([10 15 19 12],:)';
 
 v_temp=v_temp.*0.195; % go from raw to uV
 fs = D.Header.sample_rate;
@@ -35,7 +36,7 @@ fs = D.Header.sample_rate;
 
 % data_raw(50000+[0:2],:)=-80; % add fake spike?
 
-plotlim=200000;
+plotlim=20000;
 offs=1200000;
 figure(1);
 clf;
@@ -53,8 +54,8 @@ data_bp=filter(b,a,v_temp); %apply filter in one direction
 plot(v_temp(1:plotlim,:),'k:');
 plot(data_bp(1:plotlim,:));
 
-% find treshold crossings
-treshold=600;
+%% find treshold crossings
+treshold=40;
 crossed= min(data_bp,[],2)<-treshold; % trigger if _any_ channel crosses in neg. direction
 
 spike_onsets=find(diff(crossed)==1);
@@ -64,7 +65,7 @@ fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onset
 
 for i=1:numel(spike_onsets)
     if(spike_onsets(i)<plotlim)
-        plot([1 1].*spike_onsets(i),[-1 1].*treshold*2,'k--')
+        plot([1 1].*spike_onsets(i),[-2 2].*treshold*2,'r--')
     end;
 end;
 disp('done filtering')

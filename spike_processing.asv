@@ -1,30 +1,36 @@
 
+set(0,'DefaultFigureWindowStyle','docked'); % fix matlab's figure positioning bug
+
+%% or load from MAT file
+%{
+%load('C:\Users\Jakob Voigts\Downloads\example_ephys\ancalogon_2019-11-13T07_51_08_TT13_100sec.mat');
+load('C:\Users\Jakob Voigts\Downloads\example_ephys\ancalogon_2019-11-13T07_51_08_TT13_600sec.mat');
+fs = 30000; % 30KHz
+v_temp=v_temp';
+%}
+
 
 %% load raw data
-
-set(0,'DefaultFigureWindowStyle','docked'); % fix matlab's figure positioning bug
 
 % raw data available on
 % usb sticks
 %
-datapath='C:\Users\Jakob Voigts\Desktop\pondababa_2021-09-18_09-33-02\Record Node 111\'
+addpath('C:\Users\Jakob Voigts\Documents\GitHub\analysis-tools\');
+ %datapath='C:\Users\Jakob Voigts\Desktop\pondababa_2021-09-18_09-33-02\Record Node 111\'
+datapath='C:\Users\Jakob Voigts\Downloads\example_ephys\2022-06-12_16-24-58\Record Node 117\experiment1\recording1\structure.oebin'
 
+D=load_open_ephys_binary(datapath,'continuous',1,'mmap');
 
-data_raw=[];
-for ch=[1:4]+(4*3) % grab 4 channels of raw data from one tetrode
-    fname=sprintf('100_%d.continuous',ch)
-    [data, timestamps, info]=load_open_ephys_data_faster(fullfile(datapath,fname));
-    data_raw(:,end+1) = data;
-end;
+v_temp=D.Data.Data.mapped([0:3]*1),:)';
 
-%
-data_raw=data_raw.*info.header.bitVolts;
-fs = info.header.sampleRate;
+v_temp=v_temp.*0.195; % go from raw to uV
+fs = D.Header.sample_rate;
 
 %%data_raw=data_raw(1:30000,:); % cut away some data for faster testing
 
-%% plot raw data
-data_raw=data_raw-median_all_data;
+
+% plot raw data
+% data_raw=data_raw-repmat(median_all_data',1,4);
 
 % data_raw(50000+[0:2],:)=-80; % add fake spike?
 
@@ -33,7 +39,7 @@ offs=1200000;
 figure(1);
 clf;
 hold on;
-plot(data_raw([1:plotlim],:));
+plot(v_temp([1:plotlim],:));
 
 
 %% filter
@@ -41,18 +47,18 @@ plot(data_raw([1:plotlim],:));
 clf; hold on;
 [b,a] = butter(3, [300 3000]/(fs/2)); % choose filter (normalize bp freq. to nyquist freq.)
 
-data_bp=filter(b,a,data_raw); %apply filter in one direction
+data_bp=filter(b,a,v_temp); %apply filter in one direction
 
-plot(data_raw(1:plotlim,:),'k:');
+plot(v_temp(1:plotlim,:),'k:');
 plot(data_bp(1:plotlim,:));
 
-%% find treshold crossings
-treshold=20;
+% find treshold crossings
+treshold=600;
 crossed= min(data_bp,[],2)<-treshold; % trigger if _any_ channel crosses in neg. direction
 
 spike_onsets=find(diff(crossed)==1);
 
-length_sec=size(data,1)/fs;
+length_sec=size(v_temp,1)/fs;
 fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onsets),round(length_sec/60),numel(spike_onsets)/length_sec);
 
 for i=1:numel(spike_onsets)
@@ -81,7 +87,7 @@ end;
 
 %% plot peak to peak amplitudes
 clf; hold on;
-plot(spikes.peakamps(:,2),spikes.peakamps(:,4),'.');
+plot(spikes.peakamps(:,1),spikes.peakamps(:,4),'.');
 daspect([1 1 1]);
 
 %% initialize all cluster assignments to 1

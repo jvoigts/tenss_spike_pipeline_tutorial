@@ -7,8 +7,9 @@ set(0,'DefaultFigureWindowStyle','docked'); % fix matlab's figure positioning bu
 % raw data available on
 % usb sticks
 %
-datapath='C:\Users\Jakob Voigts\Desktop\pondababa_2021-09-18_09-33-02\Record Node 111\'
-
+datapath='C:\Users\Jakob Voigts\Downloads\example_ephys\2022-06-12_16-24-58\Record Node 117\experiment2\recording1\continuous\Rhythm_FPGA-111.0\continuous.dat'
+D=load_open_ephys_binary(datapath,'continuous',1,'mmap');
+%%
 
 data_raw=[];
 for ch=[1:4*6] % grab a few channels of raw data from one tetrode

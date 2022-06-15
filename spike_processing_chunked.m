@@ -18,21 +18,22 @@ v_temp=v_temp';
 addpath('C:\Users\Jakob Voigts\Documents\GitHub\analysis-tools\');
 %datapath='C:\Users\Jakob Voigts\Desktop\pondababa_2021-09-18_09-33-02\Record Node 111\'
 datapath='C:\Users\Jakob Voigts\Downloads\example_ephys\2022-06-12_16-24-58\Record Node 117\experiment1\recording1\structure.oebin'
+datapath='C:\Users\Jakob Voigts\Desktop\ephys data spike gals\mouse_task\ephys\2022-06-15_15-32-19\Record Node 104\experiment2\recording1\structure.oebin'
 
 D=load_open_ephys_binary(datapath,'continuous',1,'mmap');
 
 
 
 tt=3;
-tt=7;
+tt=1;
 
-chunksize=30; % seconds
+chunksize=50; % seconds
 treshold=40;
 
 fs = D.Header.sample_rate;
 chunksize_samples=D.Header.sample_rate*chunksize;
 chunk_boundaries=unique([[0:chunksize_samples:numel(D.Timestamps)],numel(D.Timestamps)]);
-pad=1*D.Header.sample_rate; % padding each chunk
+pad = 1*D.Header.sample_rate; % padding each chunk in sec
 
 % output variables for accumulation
 spike_times=[];
@@ -58,7 +59,7 @@ for chunk=1:numel(chunk_boundaries)-1
 
     data_bp=filtfilt(b,a,double(v_trode')); %apply filter in one direction
 
-    % plot(data_bp); drawnow;
+    plot(data_bp); drawnow;
 
     %% find treshold crossings
 
@@ -67,15 +68,9 @@ for chunk=1:numel(chunk_boundaries)-1
     spike_onsets=find(diff(crossed)==1);
     spike_onsets(spike_onsets<pad)=[]; spike_onsets(spike_onsets>pad+chunksize_samples)=[]; % remove doubled ones
 
-    length_sec=size(v_temp,1)/fs;
+    length_sec=size(v_trode,1)/fs;
     fprintf('got %d candidate events in %dmin of data, ~%.2f Hz\n',numel(spike_onsets),round(chunksize/60),numel(spike_onsets)/chunksize);
 
-    for i=1:numel(spike_onsets)
-        if(spike_onsets(i)<plotlim)
-            plot([1 1].*spike_onsets(i),[-2 2].*treshold*2,'r--')
-        end;
-    end;
-    %disp('done filtering')
 
     %% extract spike waveforms and make some features
 
@@ -105,10 +100,11 @@ spike_amps=spike_amps';
 %% plot peak to peak amplitudes
 clf; hold on;
 subs=10;
-plot(spike_amps(1:subs:end,3),spike_amps(1:subs:end,1),'.');
-daspect([1 1 1]);
+plot(spike_amps(1:subs:end,3),spike_amps(1:subs:end,4),'.');
+%daspect([1 1 1]);
 
 %% save for simpleclust
+disp('saving')
 mua=[];
 mua.ts_spike= ([1:(32*4)]-5)./D.Header.sample_rate;
 mua.ncontacts=4;
@@ -117,3 +113,4 @@ mua.ts = double(spike_times./D.Header.sample_rate);
 mua.Nspikes = size(spike_waveforms,1);
 mua.sourcechannel = tt;
 save(sprintf('extracted_spikes_TT%d.mat',tt), 'mua');
+disp('saved')

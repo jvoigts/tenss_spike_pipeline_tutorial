@@ -104,73 +104,16 @@ spike_amps=spike_amps';
 
 %% plot peak to peak amplitudes
 clf; hold on;
-subs=1;
+subs=10;
 plot(spike_amps(1:subs:end,3),spike_amps(1:subs:end,1),'.');
 daspect([1 1 1]);
 
-%% initialize all cluster assignments to 1
-spikes.cluster=ones(numel(spike_onsets),1);
-
-%% manual spike sorter
-% cluster 0 shall be the noise cluster (dont plot this one)
-run =1;
-
-projections=[1 2; 1 3; 1 4; 2 3; 2 4; 3 4]; % possible feature projections
-use_projection=1;3
-
-cluster_selected=2; spike_selected=1;
-
-while run
-    dat_x=spikes.peakamps(:,projections(use_projection,1));
-    dat_y=spikes.peakamps(:,projections(use_projection,2));
-
-    clf;
-    subplot(2,3,1); hold on;% plot median waveform
-    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.2),'g');
-    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.5),'k');
-    plot(quantile(spikes.waveforms(spikes.cluster==cluster_selected,:),.8),'g');
-    plot(spikes.waveforms(spike_selected,:),'r'); % also plot currently selected spike waveform
-
-    title('waveforms from cluster');
-
-    subplot(2,3,4); hold on;% plot isi distribution
-    isi = diff(spikes.times(spikes.cluster==cluster_selected));
-    bins=linspace(0.5,25,20);
-    h= hist(isi,bins); h(end)=0;
-    stairs(bins,h);
-    title('ISI histogram'); xlabel('isi(ms)');
-
-    ax=subplot(2,3,[2 3 5 6]); hold on; % plot main feature display
-    ii=spikes.cluster>0; % dont plot noise cluster
-    scatter(dat_x(ii),dat_y(ii),(0.5+(spikes.cluster(ii)==cluster_selected))*20,spikes.cluster(ii)*2,'filled');
-    plot(dat_x(spike_selected),dat_y(spike_selected),'ro','markerSize',10);
-    title(sprintf('current cluster %d, projection %d, %d spikes in cluster',cluster_selected,use_projection,sum(spikes.cluster==cluster_selected)));
-
-    [x,y,b]=ginput(1);
-
-    if b>47 & b <58 % number keys, cluster select
-        cluster_selected=b-48;
-    end;
-
-    if b==30; use_projection=mod(use_projection,6)+1; end; % up/down: cycle trough projections
-    if b==31; use_projection=mod(use_projection-2,6)+1; end; % up/down: cycle trough projections
-    if b==27; disp('exited'); run=0; end; % esc: exit
-
-    if b==43 | b==42; % +, add to cluster, * intersect cluster
-        t= imfreehand(ax,'Closed' ,1);
-        t.setClosed(1);
-        r=t.getPosition;
-        px=r(:,1);py=r(:,2);
-        in = inpolygon(dat_x,dat_y,px,py);
-        if b==43 % +, add
-            spikes.cluster(in)=cluster_selected;
-        else % *. intersect cluster (move all non selected to null cluster)
-            spikes.cluster(~in & spikes.cluster==cluster_selected)=1;
-        end;
-    end;
-
-    if b==1 % left click - select individual waveform to plot
-        [~,spike_selected]=min((dat_x-x).^2 +(dat_y-y).^2);
-    end;
-
-end;
+%% save for simpleclust
+mua=[];
+mua.ts_spike= ([1:(32*4)]-5)./D.Header.sample_rate;
+mua.ncontacts=4;
+mua.waveforms = spike_waveforms;
+mua.ts = double(spike_times./D.Header.sample_rate);
+mua.Nspikes = size(spike_waveforms,1);
+mua.sourcechannel = tt;
+save(sprintf('extracted_spikes_TT%d.mat',tt), 'mua');
